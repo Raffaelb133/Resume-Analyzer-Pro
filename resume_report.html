@@ -1,0 +1,197 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>CV Sammanfattning</title>
+            <style>
+                :root {
+                    --primary-color: #2563eb;
+                    --background-color: #f8fafc;
+                    --text-color: #1e293b;
+                    --border-color: #e2e8f0;
+                    --tag-bg: #e0e7ff;
+                    --tag-color: #3730a3;
+                }
+                
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    line-height: 1.6;
+                    background: var(--background-color);
+                    color: var(--text-color);
+                }
+                
+                .container {
+                    max-width: 1000px;
+                    margin: 2rem auto;
+                    padding: 0 1rem;
+                }
+                
+                .header {
+                    text-align: center;
+                    margin-bottom: 3rem;
+                    padding: 2rem 0;
+                }
+                
+                .header h1 {
+                    font-size: 2.5rem;
+                    color: var(--primary-color);
+                    margin-bottom: 1rem;
+                }
+                
+                .cv-list {
+                    display: grid;
+                    gap: 2rem;
+                }
+                
+                .cv-item {
+                    background: white;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    padding: 2rem;
+                    transition: transform 0.2s ease;
+                }
+                
+                .cv-item:hover {
+                    transform: translateY(-2px);
+                }
+                
+                .name {
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: var(--primary-color);
+                    margin-bottom: 1.5rem;
+                    padding-bottom: 1rem;
+                    border-bottom: 2px solid var(--border-color);
+                }
+                
+                .detail {
+                    margin: 1.5rem 0;
+                }
+                
+                .label {
+                    display: block;
+                    font-weight: 600;
+                    color: var(--text-color);
+                    margin-bottom: 0.5rem;
+                    font-size: 0.9rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                
+                .content {
+                    background: var(--background-color);
+                    padding: 1rem;
+                    border-radius: 8px;
+                }
+                
+                ul {
+                    list-style: none;
+                }
+                
+                li {
+                    margin: 0.5rem 0;
+                    padding-left: 1.5rem;
+                    position: relative;
+                }
+                
+                li:before {
+                    content: "•";
+                    color: var(--primary-color);
+                    position: absolute;
+                    left: 0;
+                }
+                
+                .competence-item {
+                    display: inline-block;
+                    background: var(--tag-bg);
+                    color: var(--tag-color);
+                    padding: 0.3rem 0.8rem;
+                    margin: 0.25rem;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                }
+                
+                .competence-item:hover {
+                    transform: scale(1.05);
+                }
+                
+                @media (max-width: 768px) {
+                    .container {
+                        margin: 1rem auto;
+                    }
+                    
+                    .cv-item {
+                        padding: 1.5rem;
+                    }
+                    
+                    .header h1 {
+                        font-size: 2rem;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <header class="header">
+                    <h1>CV Sammanfattning</h1>
+                </header>
+                <div class="cv-list">
+    
+            <div class="cv-item">
+                <div class="name">Ahmad Sami Salha</div>
+                
+                <div class="detail">
+                    <span class="label">Vårdutbildning</span>
+                    <div class="content">
+                        Ingen vårdutbildning angiven
+                    </div>
+                </div>
+
+                <div class="detail">
+                    <span class="label">Vårdkompetenser</span>
+                    <div class="content">
+                        <span class='competence-item'>Beskrivning: Jag har jobbat på två Hemtjänsts företag i nästan tre år</span><span class='competence-item'>Allmän omvårdnadserfarenhet</span><span class='competence-item'>Omsorg Hemtjänst För ever och Plusvita 201901 - 202207</span><span class='competence-item'>Hemtjänst</span>
+                    </div>
+                </div>
+
+                <div class="detail">
+                    <span class="label">Relevant arbetslivserfarenhet</span>
+                    <div class="content">
+                        <ul>
+                            <li>Omsorg Hemtjänst För ever och Plusvita 201901 - 202207 - Jag har jobbat på två Hemtjänsts företag i nästan tre år</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="detail">
+                    <span class="label">Körkort</span>
+                    <div class="content">
+                        Anges inte
+                    </div>
+                </div>
+
+                <div class="detail">
+                    <span class="label">Språkkunskaper</span>
+                    <div class="content">
+                        <ul>
+                            <li>Svenska</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        
+                </div>
+            </div>
+        </body>
+        </html>
+    
