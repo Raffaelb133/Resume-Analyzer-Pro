@@ -1,34 +1,34 @@
+import re
 import os
-from PyPDF2 import PdfReader
+import sys
+import nltk
 from docx import Document
+from PyPDF2 import PdfReader
 import pandas as pd
 from datetime import datetime
-import re
-from collections import Counter
-import matplotlib.pyplot as plt
-import seaborn as sns
-from jinja2 import Template
-import sys
-import chardet
-import webbrowser
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-import spacy
+import webbrowser
+import chardet
+import matplotlib.pyplot as plt
+import seaborn as sns
+from jinja2 import Template
+
+# Download required NLTK data
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
+try:
+    nltk.data.find('averaged_perceptron_tagger')
+except LookupError:
+    nltk.download('averaged_perceptron_tagger')
 
 # Set UTF-8 encoding for proper handling of Swedish characters
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
-
-# Load spaCy model
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    # Download the model if it's not installed
-    import subprocess
-    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"], check=True)
-    nlp = spacy.load("en_core_web_sm")
 
 # Folder containing resumes
 RESUME_FOLDER = "resumes/"
@@ -108,111 +108,111 @@ def extract_text_from_docx(file_path):
         return ""
 
 def analyze_resume(text):
-    """Analyze resume text using spaCy for better results"""
-    doc = nlp(text)
+    """Analyze resume text using NLTK"""
+    # Tokenize the text
+    sentences = nltk.sent_tokenize(text)
+    words = nltk.word_tokenize(text)
     
     analysis = {
-        'skills': extract_skills(doc),
-        'education': extract_education(doc),
-        'experience': extract_experience(doc),
-        'languages': extract_languages(doc),
-        'certifications': extract_certifications(doc)
+        'skills': extract_skills(text, words),
+        'education': extract_education(sentences),
+        'experience': extract_experience(sentences),
+        'languages': extract_languages(text),
+        'certifications': extract_certifications(sentences)
     }
     return analysis
 
-def extract_skills(doc):
-    """Extract skills using spaCy's entity recognition and pattern matching"""
-    skills = []
-    
+def extract_skills(text, words):
+    """Extract skills using keyword matching and NLTK"""
     # Technical skills patterns
-    tech_patterns = [
-        'python', 'java', 'javascript', 'html', 'css', 'sql', 'react', 'node.js',
-        'aws', 'docker', 'kubernetes', 'git', 'machine learning', 'data analysis'
-    ]
+    tech_skills = {
+        'programming': ['python', 'java', 'javascript', 'html', 'css', 'sql', 'react', 'node.js',
+                     'aws', 'docker', 'kubernetes', 'git', 'machine learning', 'data analysis'],
+        'software': ['microsoft office', 'excel', 'word', 'powerpoint', 'photoshop', 'illustrator'],
+        'databases': ['mysql', 'postgresql', 'mongodb', 'oracle', 'sql server'],
+        'tools': ['jira', 'github', 'gitlab', 'bitbucket', 'jenkins']
+    }
     
-    # Soft skills patterns
-    soft_patterns = [
-        'leadership', 'communication', 'teamwork', 'problem solving', 'project management',
-        'time management', 'analytical', 'creative', 'detail oriented', 'organization'
-    ]
+    # Soft skills
+    soft_skills = ['leadership', 'communication', 'teamwork', 'problem solving', 'project management',
+                  'time management', 'analytical', 'creative', 'detail oriented', 'organization']
     
-    # Extract skills from text
-    text_lower = doc.text.lower()
-    for skill in tech_patterns + soft_patterns:
+    found_skills = []
+    text_lower = text.lower()
+    
+    # Check for technical skills
+    for category, skills in tech_skills.items():
+        for skill in skills:
+            if skill in text_lower:
+                found_skills.append(skill)
+    
+    # Check for soft skills
+    for skill in soft_skills:
         if skill in text_lower:
-            skills.append(skill)
+            found_skills.append(skill)
     
-    # Add skills from entity recognition
-    for ent in doc.ents:
-        if ent.label_ in ['PRODUCT', 'ORG'] and len(ent.text) > 2:  # Filter out short abbreviations
-            skills.append(ent.text)
-    
-    return list(set(skills))  # Remove duplicates
+    return list(set(found_skills))
 
-def extract_education(doc):
-    """Extract education using spaCy's entity recognition and pattern matching"""
+def extract_education(sentences):
+    """Extract education information using pattern matching"""
     education = []
-    edu_keywords = ['degree', 'university', 'college', 'school', 'bachelor', 'master', 'phd']
+    education_keywords = ['degree', 'university', 'college', 'school', 'bachelor', 'master', 'phd',
+                         'diploma', 'certification', 'graduate']
     
-    # Look for education-related sentences
-    for sent in doc.sents:
-        sent_text = sent.text.lower()
-        if any(keyword in sent_text for keyword in edu_keywords):
-            # Clean up and format the education entry
-            clean_text = ' '.join(sent.text.split())
+    for sentence in sentences:
+        sentence_lower = sentence.lower()
+        if any(keyword in sentence_lower for keyword in education_keywords):
+            # Clean up and format
+            clean_text = ' '.join(sentence.split())
             if clean_text not in education:
                 education.append(clean_text)
     
     return education
 
-def extract_experience(doc):
-    """Extract work experience using spaCy's entity recognition and date patterns"""
+def extract_experience(sentences):
+    """Extract work experience information"""
     experience = []
+    experience_keywords = ['experience', 'work', 'employment', 'job', 'position', 'role']
     
-    for sent in doc.sents:
-        # Look for sentences with dates and organizations
-        has_date = any(token.like_num or token.ent_type_ == 'DATE' for token in sent)
-        has_org = any(ent.label_ == 'ORG' for ent in sent.ents)
+    for sentence in sentences:
+        # Look for dates and experience keywords
+        has_date = bool(re.search(r'\b(19|20)\d{2}\b', sentence))
+        has_keyword = any(keyword in sentence.lower() for keyword in experience_keywords)
         
-        if has_date and has_org:
-            clean_text = ' '.join(sent.text.split())
+        if has_date or has_keyword:
+            clean_text = ' '.join(sentence.split())
             if clean_text not in experience:
                 experience.append(clean_text)
     
     return experience
 
-def extract_languages(doc):
-    """Extract languages using spaCy's entity recognition and pattern matching"""
-    common_languages = [
+def extract_languages(text):
+    """Extract language skills"""
+    languages = {
         'english', 'spanish', 'french', 'german', 'chinese', 'japanese',
-        'arabic', 'russian', 'portuguese', 'italian', 'swedish', 'norwegian'
-    ]
+        'arabic', 'russian', 'portuguese', 'italian', 'swedish', 'norwegian',
+        'danish', 'dutch', 'korean', 'hindi', 'bengali', 'urdu', 'turkish',
+        'vietnamese', 'thai', 'indonesian', 'malay', 'filipino', 'greek'
+    }
     
-    languages = []
-    text_lower = doc.text.lower()
+    found_languages = []
+    text_lower = text.lower()
     
-    # Look for common languages
-    for lang in common_languages:
+    for lang in languages:
         if lang in text_lower:
-            languages.append(lang)
+            found_languages.append(lang)
     
-    # Add languages from entity recognition
-    for ent in doc.ents:
-        if ent.label_ == 'LANGUAGE':
-            languages.append(ent.text)
-    
-    return list(set(languages))
+    return found_languages
 
-def extract_certifications(doc):
-    """Extract certifications using spaCy's pattern matching"""
+def extract_certifications(sentences):
+    """Extract certifications"""
     certifications = []
-    cert_keywords = ['certified', 'certification', 'certificate', 'license']
+    cert_keywords = ['certified', 'certification', 'certificate', 'license', 'diploma']
     
-    for sent in doc.sents:
-        sent_text = sent.text.lower()
-        if any(keyword in sent_text for keyword in cert_keywords):
-            # Clean up and format the certification entry
-            clean_text = ' '.join(sent.text.split())
+    for sentence in sentences:
+        sentence_lower = sentence.lower()
+        if any(keyword in sentence_lower for keyword in cert_keywords):
+            clean_text = ' '.join(sentence.split())
             if clean_text not in certifications:
                 certifications.append(clean_text)
     

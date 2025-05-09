@@ -8,5 +8,4 @@ chardet>=4.0.0
 reportlab>=4.0.4
 streamlit>=1.32.0
 python-dotenv>=1.0.0
-spacy>=3.7.2
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0.tar.gz
+nltk>=3.8.1
