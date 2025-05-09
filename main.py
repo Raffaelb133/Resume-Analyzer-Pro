@@ -15,91 +15,24 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+import spacy
 
 # Set UTF-8 encoding for proper handling of Swedish characters
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
+
+# Load spaCy model
+try:
+    nlp = spacy.load("en_core_web_sm")
+except:
+    os.system("python -m spacy download en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
 
 # Folder containing resumes
 RESUME_FOLDER = "resumes/"
 
 # Ensure the resumes folder exists
 os.makedirs(RESUME_FOLDER, exist_ok=True)
-
-# Enhanced criteria for filtering resumes
-CRITERIA = {
-    "utbildning": [
-        "Undersköterska",
-        "Vårdbiträde",
-        "Vård- och omsorgsprogrammet",
-        "Omvårdnadsprogram",
-        "Vårdutbildning",
-        "Omvårdnadsutbildning",
-        "Äldreomsorgsutbildning",
-        "Yrkespaket Vårdbiträde"
-    ],
-    "kompetenser": [
-        "Hemtjänst",
-        "Äldreomsorg",
-        "Hemsjukvård",
-        "Personlig assistans",
-        "Vårdhem",
-        "Särskilt boende",
-        "SÄBO",
-        "LSS",
-        "Vård",
-        "Omsorg",
-        "Vårdare",
-        "Omsorgsarbete",
-        "Sjukvård",
-        "Äldrevård",
-        "Demensboende",
-        "Serviceboende",
-        "Gruppboende",
-        "Boendestöd",
-        "Vårdavdelning",
-        "Vårdcentral",
-        "Sjukhem",
-        "Omsorgsboende",
-        "Behandlingsassistent",
-        "Stödassistent",
-        "Stödpedagog",
-        "Undersköterska",
-        "Vårdbiträde",
-        "Sjukhus",
-        "Akutsjukvård",
-        "Habilitering",
-        "Rehabilitering",
-        "Psykiatrisk vård",
-        "Social omsorg",
-        "Utvecklingsstörning",
-        "Funktionshinder",
-        "Funktionsnedsättning",
-        "Omvårdnad",
-        "APL",
-        "Äldreboende",  # Added for elderly care
-        "Äldre",        # Added for elderly care
-        "Senior",       # Added for elderly care
-        "Geriatrik",   # Added for elderly care
-        "Pensionär"    # Added for elderly care
-    ],
-    "körkort": [
-        "B-körkort",
-        "Körkort B",
-        "Körkort klass B",
-        "Har körkort"
-    ],
-    "språk": [
-        "Svenska",
-        "Engelska",
-        "English",
-        "Swedish",
-        "Tigrinja",
-        "Tigrinya",
-        "Amhariska",
-        "Amharic"
-    ]
-}
 
 def verify_document(file_path):
     """
@@ -172,170 +105,153 @@ def extract_text_from_docx(file_path):
         print(f"Error reading {file_path}: {e}")
         return ""
 
-def analyze_resume(content):
-    """Analyze the resume content with enhanced metrics."""
-    if not content:
-        return None
-        
-    result = {
-        'Name': '',
-        'Utbildning': '',
-        'Kompetenser': [],
-        'Erfarenhet': [],
-        'Körkort': False,
-        'Språk': []
+def analyze_resume(text):
+    """Analyze resume text using spaCy for better results"""
+    doc = nlp(text)
+    
+    analysis = {
+        'skills': extract_skills(doc),
+        'education': extract_education(doc),
+        'experience': extract_experience(doc),
+        'languages': extract_languages(doc),
+        'certifications': extract_certifications(doc)
     }
-    
-    # Split content into lines for better analysis
-    lines = content.split('\n')
-    current_section = ''
-    experience_entry = []
-    
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        # Convert line to lowercase for case-insensitive matching
-        line_lower = line.lower()
-        
-        # Skip header/footer lines
-        if any(skip in line_lower for skip in ['arbetsförmedlingen', 'fe 8055', 'stockholm', 'sida', 'post', 'besök', 'telefon', 'e-post']):
-            continue
-            
-        # Extract name
-        if line.startswith('Name:'):
-            result['Name'] = line.replace('Name:', '').strip()
-            continue
-            
-        # Check for competencies
-        for comp in CRITERIA['kompetenser']:
-            if comp.lower() in line_lower:
-                if line not in result['Kompetenser']:
-                    result['Kompetenser'].append(line)
-        
-        # Check for languages
-        for lang in CRITERIA['språk']:
-            if lang.lower() in line_lower:
-                if lang not in result['Språk']:
-                    result['Språk'].append(lang)
-            
-        # Detect sections
-        if 'Inriktning Anordnare Period' in line or 'Utbildning' in line:
-            current_section = 'education'
-            continue
-        elif 'Yrke Arbetsgivare Period' in line or 'Erfarenhet' in line:
-            current_section = 'experience'
-            continue
-        elif any(keyword in line_lower for keyword in ['språk', 'language', 'languages', 'språkkunskaper']):
-            current_section = 'language'
-            continue
-            
-        # Process content based on section
-        if current_section == 'education':
-            if any(edu.lower() in line_lower for edu in CRITERIA['utbildning']):
-                if result['Utbildning']:
-                    result['Utbildning'] += "; " + line
-                else:
-                    result['Utbildning'] = line
-                
-        elif current_section == 'experience':
-            if any(comp.lower() in line_lower for comp in CRITERIA['kompetenser']):
-                if line.startswith('Beskrivning:'):
-                    if experience_entry:
-                        experience_entry.append(line.replace('Beskrivning:', '').strip())
-                        result['Erfarenhet'].append(' - '.join(experience_entry))
-                        experience_entry = []
-                else:
-                    if experience_entry:
-                        result['Erfarenhet'].append(' - '.join(experience_entry))
-                    experience_entry = [line]
-            
-        elif current_section == 'language':
-            for lang in CRITERIA['språk']:
-                if lang.lower() in line_lower and lang not in result['Språk']:
-                    result['Språk'].append(lang)
-            
-        # Check for driver's license
-        if any(keyword in line_lower for keyword in ['körkort', 'driver', 'license', 'driving']):
-            result['Körkort'] = True
-            
-    # Add any remaining experience entry
-    if experience_entry:
-        result['Erfarenhet'].append(' - '.join(experience_entry))
-    
-    # Clean up experience entries
-    result['Erfarenhet'] = [exp for exp in result['Erfarenhet'] 
-                           if not any(skip in exp.lower() for skip in ['arbetsförmedlingen', 'fe 8055', 'stockholm'])]
-    
-    # Clean up competencies and languages
-    result['Kompetenser'] = list(set(result['Kompetenser']))  # Remove duplicates
-    result['Språk'] = list(set(result['Språk']))  # Remove duplicates
-    
-    return result
+    return analysis
 
-def calculate_criteria_scores(results):
-    """Calculate scores for each criterion and overall match."""
-    scores = []
+def extract_skills(doc):
+    """Extract skills using spaCy's entity recognition and pattern matching"""
+    skills = []
     
-    for result in results:
-        # Initialize score dictionary
-        score = {'name': result['Name']}
-        
-        # Education score (35%)
-        education = result.get('Utbildning', 'Not specified')
-        if education != 'Not specified':
-            score['education_match'] = 1.0
-        else:
-            score['education_match'] = 0.0
-        
-        # Relevant Experience score (35%)
-        relevant_experience = result.get('Erfarenhet', [])
-        if isinstance(relevant_experience, str):
-            relevant_experience = [relevant_experience]
-        if relevant_experience and relevant_experience[0] != 'None':
-            score['experience_match'] = min(1.0, len(relevant_experience) / 3)  # Normalize to 3 relevant experiences
-        else:
-            score['experience_match'] = 0.0
-        
-        # Driver's license score (20%)
-        license = result.get('Körkort', 'No')
-        if license == 'Yes':
-            score['drivers_license_match'] = 1.0
-        else:
-            score['drivers_license_match'] = 0.0
-        
-        # Language skills score (5%)
-        languages = result.get('Språk', [])
-        if isinstance(languages, str):
-            languages = [languages]
+    # Technical skills patterns
+    tech_patterns = [
+        'python', 'java', 'javascript', 'html', 'css', 'sql', 'react', 'node.js',
+        'aws', 'docker', 'kubernetes', 'git', 'machine learning', 'data analysis'
+    ]
+    
+    # Soft skills patterns
+    soft_patterns = [
+        'leadership', 'communication', 'teamwork', 'problem solving', 'project management',
+        'time management', 'analytical', 'creative', 'detail oriented', 'organization'
+    ]
+    
+    # Extract skills from text
+    text_lower = doc.text.lower()
+    for skill in tech_patterns + soft_patterns:
+        if skill in text_lower:
+            skills.append(skill)
+    
+    # Add skills from entity recognition
+    for ent in doc.ents:
+        if ent.label_ in ['PRODUCT', 'ORG'] and len(ent.text) > 2:  # Filter out short abbreviations
+            skills.append(ent.text)
+    
+    return list(set(skills))  # Remove duplicates
 
-        # Certifications score (5%)
-        certifications = result.get('Certifieringar', 'None')
-        if certifications != 'None':
-            score['certifications_match'] = 1.0
-        else:
-            score['certifications_match'] = 0.0
+def extract_education(doc):
+    """Extract education using spaCy's entity recognition and pattern matching"""
+    education = []
+    edu_keywords = ['degree', 'university', 'college', 'school', 'bachelor', 'master', 'phd']
+    
+    # Look for education-related sentences
+    for sent in doc.sents:
+        sent_text = sent.text.lower()
+        if any(keyword in sent_text for keyword in edu_keywords):
+            # Clean up and format the education entry
+            clean_text = ' '.join(sent.text.split())
+            if clean_text not in education:
+                education.append(clean_text)
+    
+    return education
+
+def extract_experience(doc):
+    """Extract work experience using spaCy's entity recognition and date patterns"""
+    experience = []
+    
+    for sent in doc.sents:
+        # Look for sentences with dates and organizations
+        has_date = any(token.like_num or token.ent_type_ == 'DATE' for token in sent)
+        has_org = any(ent.label_ == 'ORG' for ent in sent.ents)
         
-        # Calculate weighted overall match
-        weights = {
-            'education_match': 0.35,      # 35%
-            'experience_match': 0.35,     # 35%
-            'drivers_license_match': 0.20, # 20%
-            'certifications_match': 0.05,   # 5%
-            'language_match': 0.05       # 5%
+        if has_date and has_org:
+            clean_text = ' '.join(sent.text.split())
+            if clean_text not in experience:
+                experience.append(clean_text)
+    
+    return experience
+
+def extract_languages(doc):
+    """Extract languages using spaCy's entity recognition and pattern matching"""
+    common_languages = [
+        'english', 'spanish', 'french', 'german', 'chinese', 'japanese',
+        'arabic', 'russian', 'portuguese', 'italian', 'swedish', 'norwegian'
+    ]
+    
+    languages = []
+    text_lower = doc.text.lower()
+    
+    # Look for common languages
+    for lang in common_languages:
+        if lang in text_lower:
+            languages.append(lang)
+    
+    # Add languages from entity recognition
+    for ent in doc.ents:
+        if ent.label_ == 'LANGUAGE':
+            languages.append(ent.text)
+    
+    return list(set(languages))
+
+def extract_certifications(doc):
+    """Extract certifications using spaCy's pattern matching"""
+    certifications = []
+    cert_keywords = ['certified', 'certification', 'certificate', 'license']
+    
+    for sent in doc.sents:
+        sent_text = sent.text.lower()
+        if any(keyword in sent_text for keyword in cert_keywords):
+            # Clean up and format the certification entry
+            clean_text = ' '.join(sent.text.split())
+            if clean_text not in certifications:
+                certifications.append(clean_text)
+    
+    return certifications
+
+def calculate_score(analysis):
+    """Calculate a comprehensive score based on the analysis"""
+    score = 0
+    
+    # Skills score (up to 30 points)
+    skill_score = min(len(analysis['skills']) * 3, 30)
+    score += skill_score
+    
+    # Education score (up to 25 points)
+    edu_score = min(len(analysis['education']) * 5, 25)
+    score += edu_score
+    
+    # Experience score (up to 25 points)
+    exp_score = min(len(analysis['experience']) * 5, 25)
+    score += exp_score
+    
+    # Languages score (up to 10 points)
+    lang_score = min(len(analysis['languages']) * 2, 10)
+    score += lang_score
+    
+    # Certifications score (up to 10 points)
+    cert_score = min(len(analysis['certifications']) * 2, 10)
+    score += cert_score
+    
+    return {
+        'total': score,
+        'breakdown': {
+            'skills': skill_score,
+            'education': edu_score,
+            'experience': exp_score,
+            'languages': lang_score,
+            'certifications': cert_score
         }
-        
-        score['overall_match'] = sum(
-            score[criterion] * weight 
-            for criterion, weight in weights.items()
-        )
-        
-        scores.append(score)
-    
-    return scores
+    }
 
-def generate_html_report(results_dict, scores):
+def generate_html_report(results_dict):
     html_content = []
     html_content.append('''
         <!DOCTYPE html>
@@ -487,51 +403,33 @@ def generate_html_report(results_dict, scores):
                 <div class="cv-list">
     ''')
 
-    for result in results_dict.values():
-        name = result.get('Name', '')
-        education = result.get('Utbildning', '')
-        experience = result.get('Erfarenhet', [])
-        if isinstance(experience, str):
-            experience = [experience]
-        has_license = result.get('Körkort', False)
-        languages = result.get('Språk', [])
-        if isinstance(languages, str):
-            languages = [languages]
-        competencies = result.get('Kompetenser', [])
-        if isinstance(competencies, str):
-            competencies = [competencies]
-
+    for name, result in results_dict.items():
         html_content.append(f'''
             <div class="cv-item">
                 <div class="name">{name}</div>
                 
                 <div class="detail">
-                    <span class="label">Vårdutbildning</span>
+                    <span class="label">Färdigheter</span>
                     <div class="content">
-                        {education if education else 'Ingen vårdutbildning angiven'}
+                        {''.join(f"<span class='competence-item'>{skill}</span>" for skill in result['skills']) if result['skills'] else 'Inga färdigheter angivna'}
                     </div>
                 </div>
 
                 <div class="detail">
-                    <span class="label">Vårdkompetenser</span>
-                    <div class="content">
-                        {''.join(f"<span class='competence-item'>{comp}</span>" for comp in competencies) if competencies else 'Inga vårdkompetenser angivna'}
-                    </div>
-                </div>
-
-                <div class="detail">
-                    <span class="label">Relevant arbetslivserfarenhet</span>
+                    <span class="label">Utbildning</span>
                     <div class="content">
                         <ul>
-                            {''.join(f"<li>{exp}</li>" for exp in experience) if experience else '<li>Ingen relevant erfarenhet angiven</li>'}
+                            {''.join(f"<li>{edu}</li>" for edu in result['education']) if result['education'] else '<li>Ingen utbildning angiven</li>'}
                         </ul>
                     </div>
                 </div>
 
                 <div class="detail">
-                    <span class="label">Körkort</span>
+                    <span class="label">Arbetslivserfarenhet</span>
                     <div class="content">
-                        {'Ja' if has_license else 'Anges inte'}
+                        <ul>
+                            {''.join(f"<li>{exp}</li>" for exp in result['experience']) if result['experience'] else '<li>Ingen arbetslivserfarenhet angiven</li>'}
+                        </ul>
                     </div>
                 </div>
 
@@ -539,7 +437,16 @@ def generate_html_report(results_dict, scores):
                     <span class="label">Språkkunskaper</span>
                     <div class="content">
                         <ul>
-                            {''.join(f"<li>{lang}</li>" for lang in languages) if languages else '<li>Inga språk angivna</li>'}
+                            {''.join(f"<li>{lang}</li>" for lang in result['languages']) if result['languages'] else '<li>Inga språk angivna</li>'}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="detail">
+                    <span class="label">Certifikat</span>
+                    <div class="content">
+                        <ul>
+                            {''.join(f"<li>{cert}</li>" for cert in result['certifications']) if result['certifications'] else '<li>Inga certifikat angivna</li>'}
                         </ul>
                     </div>
                 </div>
@@ -615,11 +522,11 @@ def main():
     # Convert results to dictionary
     results_dict = {result['Name']: result for result in results}
     
-    # Calculate scores (empty for now as we're focusing on qualitative data)
-    scores = []
+    # Calculate scores
+    scores = [calculate_score(result) for result in results_dict.values()]
     
     # Generate and save the HTML report
-    html_content = generate_html_report(results_dict, scores)
+    html_content = generate_html_report(results_dict)
     
     # Save the report
     report_file = 'resume_report.html'
