@@ -33,6 +33,20 @@ st.markdown("""
     h1 {
         color: #4F46E5;
     }
+    .highlight {
+        padding: 1.2rem;
+        background-color: #f8fafc;
+        border-radius: 0.5rem;
+        border-left: 4px solid #4F46E5;
+        margin: 1rem 0;
+    }
+    .quick-summary {
+        background-color: #ffffff;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -78,7 +92,6 @@ def main():
                     'education': analysis['education'],
                     'experience': analysis['experience'],
                     'languages': analysis['languages'],
-                    'certifications': analysis['certifications'],
                     'score': score
                 }
                 
@@ -92,58 +105,78 @@ def main():
         # Display results
         if results:
             for filename, result in results.items():
-                with st.expander(f"Results for {filename}"):
-                    # Display overall score
-                    score = result['score']
-                    st.metric("Overall Score", f"{score['total']}/100")
-                    
+                st.markdown(f"### 📄 {filename}")
+                
+                # Quick Summary Section
+                st.markdown('<div class="quick-summary">', unsafe_allow_html=True)
+                
+                # Score and key metrics in columns
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Total Score", f"{result['score']['total']}/100")
+                
+                with col2:
+                    # Show top 2 experience items
+                    if result['experience']:
+                        exp_preview = result['experience'][:2]
+                        st.markdown("**🏢 Key Experience**")
+                        for exp in exp_preview:
+                            st.markdown(f"• {exp[:100]}...")
+                
+                with col3:
+                    # Show top education
+                    if result['education']:
+                        edu_preview = result['education'][:2]
+                        st.markdown("**🎓 Key Education**")
+                        for edu in edu_preview:
+                            st.markdown(f"• {edu[:100]}...")
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+                
+                # Detailed View (expandable)
+                with st.expander("👉 Click for Detailed Analysis"):
                     # Score breakdown
                     st.subheader("Score Breakdown")
-                    col1, col2, col3, col4, col5 = st.columns(5)
-                    with col1:
-                        st.metric("Skills", f"{score['breakdown']['skills']}/30")
-                    with col2:
-                        st.metric("Education", f"{score['breakdown']['education']}/25")
-                    with col3:
-                        st.metric("Experience", f"{score['breakdown']['experience']}/25")
-                    with col4:
-                        st.metric("Languages", f"{score['breakdown']['languages']}/10")
-                    with col5:
-                        st.metric("Certifications", f"{score['breakdown']['certifications']}/10")
+                    score_cols = st.columns(4)
+                    with score_cols[0]:
+                        st.metric("Experience", f"{result['score']['breakdown']['experience']}/40")
+                    with score_cols[1]:
+                        st.metric("Education", f"{result['score']['breakdown']['education']}/35")
+                    with score_cols[2]:
+                        st.metric("Skills", f"{result['score']['breakdown']['skills']}/15")
+                    with score_cols[3]:
+                        st.metric("Languages", f"{result['score']['breakdown']['languages']}/10")
                     
-                    # Detailed sections
-                    st.subheader("Skills")
-                    if result['skills']:
-                        st.write(", ".join(result['skills']))
-                    else:
-                        st.write("No skills detected")
-                        
-                    st.subheader("Education")
-                    if result['education']:
-                        for edu in result['education']:
-                            st.write(f"• {edu}")
-                    else:
-                        st.write("No education details detected")
-                        
-                    st.subheader("Experience")
+                    # Full Experience Section
                     if result['experience']:
+                        st.markdown('<div class="highlight">', unsafe_allow_html=True)
+                        st.subheader("🏢 Full Experience")
                         for exp in result['experience']:
-                            st.write(f"• {exp}")
-                    else:
-                        st.write("No experience details detected")
-                        
-                    st.subheader("Languages")
+                            st.markdown(f"• {exp}")
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # Full Education Section
+                    if result['education']:
+                        st.markdown('<div class="highlight">', unsafe_allow_html=True)
+                        st.subheader("🎓 Full Education")
+                        for edu in result['education']:
+                            st.markdown(f"• {edu}")
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # Skills Section
+                    if result['skills']:
+                        st.markdown('<div class="highlight">', unsafe_allow_html=True)
+                        st.subheader("💪 Skills")
+                        st.write(", ".join(result['skills']))
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # Languages Section
                     if result['languages']:
+                        st.markdown('<div class="highlight">', unsafe_allow_html=True)
+                        st.subheader("🗣 Languages")
                         st.write(", ".join(result['languages']))
-                    else:
-                        st.write("No languages detected")
-                        
-                    st.subheader("Certifications")
-                    if result['certifications']:
-                        for cert in result['certifications']:
-                            st.write(f"• {cert}")
-                    else:
-                        st.write("No certifications detected")
+                        st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

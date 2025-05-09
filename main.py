@@ -44,46 +44,56 @@ def analyze_resume(text):
     return analysis
 
 def extract_skills(text):
-    """Extract skills using keyword matching"""
-    # Technical skills patterns
-    tech_skills = {
-        'programming': ['python', 'java', 'javascript', 'html', 'css', 'sql', 'react', 'node.js',
-                     'aws', 'docker', 'kubernetes', 'git', 'machine learning', 'data analysis'],
-        'software': ['microsoft office', 'excel', 'word', 'powerpoint', 'photoshop', 'illustrator'],
-        'databases': ['mysql', 'postgresql', 'mongodb', 'oracle', 'sql server'],
-        'tools': ['jira', 'github', 'gitlab', 'bitbucket', 'jenkins']
+    """Extract skills focused on home care"""
+    # Home care specific skills
+    care_skills = {
+        'medical': [
+            'medicinhantering', 'sårvård', 'insulin', 'blodtryck', 'första hjälpen',
+            'hygien', 'förflyttningsteknik', 'lyftkörkort', 'dokumentation'
+        ],
+        'practical': [
+            'matlagning', 'städning', 'tvätt', 'inköp', 'personlig hygien',
+            'dusch', 'påklädning', 'toalettbesök', 'förflyttning'
+        ],
+        'social': [
+            'kommunikation', 'bemötande', 'social aktivitet', 'empati',
+            'tålamod', 'lyhörd', 'samarbete', 'flexibel', 'serviceorienterad'
+        ],
+        'technical': [
+            'dokumentationssystem', 'treserva', 'phoniro', 'procapita',
+            'office', 'excel', 'outlook', 'tidrapportering'
+        ]
     }
-    
-    # Soft skills
-    soft_skills = ['leadership', 'communication', 'teamwork', 'problem solving', 'project management',
-                  'time management', 'analytical', 'creative', 'detail oriented', 'organization']
     
     found_skills = set()
     text_lower = text.lower()
     
-    # Check for technical skills
-    for category, skills in tech_skills.items():
+    # Check for care-specific skills
+    for category, skills in care_skills.items():
         for skill in skills:
             if skill in text_lower:
                 found_skills.add(skill)
     
-    # Check for soft skills
-    for skill in soft_skills:
-        if skill in text_lower:
-            found_skills.add(skill)
-    
     return list(found_skills)
 
 def extract_education(sentences):
-    """Extract education information"""
+    """Extract education information focused on healthcare and caregiving"""
     education = []
-    edu_keywords = ['degree', 'university', 'college', 'school', 'bachelor', 'master', 'phd',
-                   'diploma', 'certification', 'graduate']
+    edu_keywords = [
+        # Swedish healthcare education
+        'undersköterska', 'vårdbiträde', 'sjuksköterska', 'omvårdnad', 'vård och omsorg',
+        'hemtjänst utbildning', 'vårdutbildning', 'omsorgsutbildning',
+        # General education terms
+        'utbildning', 'kurs', 'gymnasium', 'komvux', 'yrkesutbildning',
+        'certifikat', 'diplom', 'betyg',
+        # Healthcare terms in English
+        'nursing', 'healthcare', 'care', 'medical', 'first aid', 'elderly care',
+        'home care', 'caregiver', 'nursing assistant'
+    ]
     
     for sentence in sentences:
         sent_lower = sentence.lower()
         if any(keyword in sent_lower for keyword in edu_keywords):
-            # Clean and format the sentence
             clean_sent = sentence.strip()
             if clean_sent and clean_sent not in education:
                 education.append(clean_sent)
@@ -91,14 +101,26 @@ def extract_education(sentences):
     return education
 
 def extract_experience(sentences):
-    """Extract work experience information"""
+    """Extract work experience information focused on home care"""
     experience = []
-    exp_keywords = ['experience', 'work', 'employment', 'job', 'position', 'role',
-                   'company', 'organization', 'department']
+    exp_keywords = [
+        # Swedish home care terms
+        'hemtjänst', 'vårdbiträde', 'undersköterska', 'personlig assistent',
+        'äldreboende', 'vård och omsorg', 'omvårdnad', 'omsorg',
+        'serviceboende', 'hemsjukvård', 'boendestöd',
+        # Work-related terms
+        'erfarenhet', 'arbetade', 'jobbade', 'anställd', 'ansvarig',
+        # Care-related activities
+        'medicinhantering', 'sårvård', 'personlig hygien', 'städning',
+        'matlagning', 'inköp', 'social aktivitet', 'dokumentation',
+        # English terms
+        'home care', 'elderly care', 'personal care', 'assisted living',
+        'caregiver', 'care assistant', 'nursing home', 'senior care'
+    ]
     
     for sentence in sentences:
         sent_lower = sentence.lower()
-        # Look for dates (years between 1900-2099) or experience keywords
+        # Look for dates or experience keywords
         has_date = bool(re.search(r'\b(19|20)\d{2}\b', sentence))
         has_keyword = any(keyword in sent_lower for keyword in exp_keywords)
         
@@ -143,37 +165,32 @@ def extract_certifications(sentences):
     return certifications
 
 def calculate_score(analysis):
-    """Calculate a comprehensive score based on the analysis"""
+    """Calculate a comprehensive score based on the analysis with focus on experience and education"""
     score = 0
     
-    # Skills score (up to 30 points)
-    skill_score = min(len(analysis['skills']) * 3, 30)
-    score += skill_score
-    
-    # Education score (up to 25 points)
-    edu_score = min(len(analysis['education']) * 5, 25)
-    score += edu_score
-    
-    # Experience score (up to 25 points)
-    exp_score = min(len(analysis['experience']) * 5, 25)
+    # Experience score (up to 40 points) - Increased weight
+    exp_score = min(len(analysis['experience']) * 8, 40)
     score += exp_score
     
-    # Languages score (up to 10 points)
+    # Education score (up to 35 points) - Increased weight
+    edu_score = min(len(analysis['education']) * 7, 35)
+    score += edu_score
+    
+    # Skills score (up to 15 points) - Decreased weight
+    skill_score = min(len(analysis['skills']) * 1.5, 15)
+    score += skill_score
+    
+    # Languages score (up to 10 points) - Same weight
     lang_score = min(len(analysis['languages']) * 2, 10)
     score += lang_score
-    
-    # Certifications score (up to 10 points)
-    cert_score = min(len(analysis['certifications']) * 2, 10)
-    score += cert_score
     
     return {
         'total': score,
         'breakdown': {
-            'skills': skill_score,
-            'education': edu_score,
-            'experience': exp_score,
-            'languages': lang_score,
-            'certifications': cert_score
+            'experience': exp_score,  # Most important
+            'education': edu_score,   # Second most important
+            'skills': skill_score,    # Less weight
+            'languages': lang_score    # Same weight
         }
     }
 
