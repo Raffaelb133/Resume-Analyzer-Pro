@@ -24,8 +24,10 @@ if sys.stdout.encoding != 'utf-8':
 # Load spaCy model
 try:
     nlp = spacy.load("en_core_web_sm")
-except:
-    os.system("python -m spacy download en_core_web_sm")
+except OSError:
+    # Download the model if it's not installed
+    import subprocess
+    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"], check=True)
     nlp = spacy.load("en_core_web_sm")
 
 # Folder containing resumes
